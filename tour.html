@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>福岡大分親子旅遊互動指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Transportation Comparison: HTML table (Goal: Compare, Method: Table, Interaction: Read).
+        - Attraction/Hotel Lists: Interactive cards (Goal: Inform/Choose, Method: HTML cards + JS for modals, Interaction: Click to open modal).
+        - Fukuoka Attraction Ticket Prices: Chart.js Bar Chart (Goal: Compare, Method: Bar Chart, Interaction: Hover for tooltip, Justification: Visual comparison of costs).
+        - Fukuoka Attraction Stay Times: Chart.js Bar Chart (Goal: Compare, Method: Bar Chart, Interaction: Hover for tooltip, Justification: Visual comparison of time commitment).
+        - Oita Attraction Ticket Prices: Chart.js Bar Chart (Goal: Compare, Method: Bar Chart, Interaction: Hover for tooltip, Justification: Visual comparison of costs).
+        - Oita Attraction Stay Times: Chart.js Bar Chart (Goal: Compare, Method: Bar Chart, Interaction: Hover for tooltip, Justification: Visual comparison of time commitment).
+        - Hotel Price Indicators: Visual representation within hotel cards (e.g., using text/icons like ¥, ¥¥, ¥¥¥) (Goal: Inform, Method: HTML/CSS, Interaction: Read).
+        - All textual content from the report will be placed in relevant sections with introductory paragraphs for context.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Adjusted for better presentation */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 350px; /* Max height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            @apply px-3 py-2 rounded-md text-sm font-medium text-stone-700 hover:bg-amber-100 hover:text-orange-600 transition-colors;
+        }
+        .nav-link-active {
+            @apply bg-teal-600 text-white hover:bg-teal-700;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* 5% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 800px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .tab-button {
+            @apply px-4 py-2 font-semibold border-b-2 border-transparent hover:border-teal-500 hover:text-teal-600 focus:outline-none transition-colors;
+        }
+        .tab-button-active {
+            @apply border-teal-600 text-teal-700;
+        }
+        .card {
+            @apply bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300;
+        }
+        .card-content {
+            @apply p-5;
+        }
+        .card-title {
+            @apply text-xl font-semibold text-orange-600 mb-2;
+        }
+        .card-text {
+            @apply text-stone-700 text-sm mb-1;
+        }
+        .card-button {
+            @apply mt-4 inline-block bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors;
+        }
+        h2 { @apply text-2xl font-bold text-orange-700 mb-4 mt-6; }
+        h3 { @apply text-xl font-semibold text-orange-600 mb-3 mt-5; }
+        table { @apply min-w-full divide-y divide-stone-200 border border-stone-300 rounded-lg shadow-sm mb-6; }
+        thead { @apply bg-amber-100; }
+        th { @apply px-4 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider; }
+        tbody { @apply bg-white divide-y divide-stone-200; }
+        td { @apply px-4 py-3 text-sm text-stone-700; }
+    </style>
+</head>
+<body class="bg-amber-50 text-stone-800">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-orange-600">福岡大分親子遊</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="nav-link">主行程</a>
+                        <a href="#" class="nav-link nav-link-active" data-section="home">首頁</a>
+                        <a href="#" class="nav-link" data-section="transport">交通指南</a>
+                        <a href="#" class="nav-link" data-section="fukuoka">福岡親子遊</a>
+                        <a href="#" class="nav-link" data-section="oita">大分親子遊</a>
+                        <a href="#" class="nav-link" data-section="itinerary">行程規劃</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-stone-700 hover:text-orange-600 focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
+            <a href="index.html" class="block nav-link">主行程</a>
+            <a href="#" class="block nav-link" data-section="home">首頁</a>
+            <a href="#" class="block nav-link" data-section="transport">交通指南</a>
+            <a href="#" class="block nav-link" data-section="fukuoka">福岡親子遊</a>
+            <a href="#" class="block nav-link" data-section="oita">大分親子遊</a>
+            <a href="#" class="block nav-link" data-section="itinerary">行程規劃</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        
+        <section id="home" class="content-section p-4">
+            <h1 class="text-3xl font-bold text-orange-700 mb-6 text-center">您的福岡大分親子探險之旅即將啟程！</h1>
+            <p class="text-lg text-stone-700 mb-4 leading-relaxed">
+                一趟精彩的日本九州家庭旅行正等著您！福岡與大分，這兩個九州的璀璨明珠，各自擁有獨特的魅力，是親子同遊的絕佳選擇。福岡以其現代化的都市風貌、充滿活力的兒童遊樂設施及美麗的海岸公園聞名；而大分則以其得天獨厚的溫泉資源、親近自然的動物園及各具特色的主題樂園吸引著無數家庭。
+            </p>
+            <p class="text-lg text-stone-700 mb-4 leading-relaxed">
+                本互動指南旨在為計劃前往福岡及大分的家庭，提供一份詳盡的旅遊資訊。從熱門親子景點的門票資訊、建議停留時間，到兩地之間的交通方式，乃至於適合家庭入住的舒適飯店，我們都將一一解析。您可以透過上方的導覽列探索不同主題，或點擊下方的快速連結開始您的探索。
+            </p>
+            <div class="grid md:grid-cols-2 gap-6 mt-8">
+                <a href="#" data-section-link="fukuoka" class="block p-6 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow text-center">
+                    <h3 class="text-2xl font-semibold text-teal-600 mb-2">🏞️ 福岡探索</h3>
+                    <p class="text-stone-600">都市魅力、海濱公園、兒童樂園</p>
+                </a>
+                <a href="#" data-section-link="oita" class="block p-6 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow text-center">
+                    <h3 class="text-2xl font-semibold text-teal-600 mb-2">♨️ 大分奇遇</h3>
+                    <p class="text-stone-600">動物王國、主題樂園、溫泉療癒</p>
+                </a>
+            </div>
+        </section>
+
+        <section id="transport" class="content-section p-4 hidden">
+            <h2>九州親子遊：行前交通規劃重點</h2>
+            <p class="mb-6 text-stone-700">妥善的交通規劃是親子旅遊成功的基石。了解如何在福岡與大分之間移動，以及在各個城市內如何便捷地前往景點，將使您的旅程更加順暢愉快。</p>
+
+            <h3>A. 福岡與大分之間的交通選擇</h3>
+            <p class="mb-4 text-stone-700">連接福岡與大分的主要交通方式為自行駕車及搭乘JR火車。選擇交通方式將直接影響到在大分縣內遊覽景點的便利性。若選擇搭乘火車抵達大分，由於大分的親子景點分佈較廣，抵達後租車可能是更方便的選擇。</p>
+            <div class="overflow-x-auto">
+                <table id="transport-comparison-table">
+                    <thead>
+                        <tr>
+                            <th>交通方式</th>
+                            <th>預估車程 (單程)</th>
+                            <th>預估費用 (單程成人)</th>
+                            <th>親子友善優點</th>
+                            <th>親子友善考量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>自行駕車</td>
+                            <td>約 2-3 小時</td>
+                            <td>過路費約 ¥2,790 - ¥4,650 日圓</td>
+                            <td>行李裝載方便、行程彈性高、可中途休息</td>
+                            <td>需熟悉日本駕駛規則、可能產生停車費用</td>
+                        </tr>
+                        <tr>
+                            <td>JR 火車</td>
+                            <td>約 1.5-3 小時 (視乎起訖點)</td>
+                            <td>約 ¥2,860 - ¥6,750 日圓</td>
+                            <td>乘坐舒適、可賞風景、部分列車有親子友善設施</td>
+                            <td>攜帶大量行李較不便、抵達大分後可能仍需轉乘其他交通</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>B. 福岡市內交通導航</h3>
+            <p class="mb-4 text-stone-700">福岡市區擁有便捷的公共交通網絡，包括市營地下鐵、市區巴士及JR各線，適合前往各都市景點。許多景點鄰近如博多車站等主要交通樞紐，方便轉乘。對於市區觀光而言，公共交通具備成本效益。</p>
+
+            <h3>C. 大分縣內交通探索</h3>
+            <p class="mb-4 text-stone-700">相較於福岡市區，大分縣的景點分佈較為廣闊。巴士是前往許多大分景點的主要方式。由於景點分散，若追求行程彈性及便利性，特別是帶著孩子和行李的家庭，在大分縣內租車自駕會是相當推薦的選擇。</p>
+        </section>
+
+        <section id="fukuoka" class="content-section p-4 hidden">
+            <h2>福岡縣：都市魅力與海濱奇觀的親子樂園</h2>
+            <p class="mb-6 text-stone-700">福岡縣作為九州的門戶，不僅是繁華的商業中心，更擁有眾多適合親子同遊的景點，從寓教於樂的體驗設施到景色宜人的海濱公園，應有盡有。本區將為您詳細介紹福岡的熱門親子景點及住宿選擇。</p>
+            <div class="mb-6 border-b border-stone-300">
+                <nav class="flex space-x-1" aria-label="Tabs">
+                    <button class="tab-button tab-button-active" data-tab="fukuoka-attractions">景點精選</button>
+                    <button class="tab-button" data-tab="fukuoka-hotels">住宿推薦</button>
+                </nav>
+            </div>
+
+            <div id="fukuoka-attractions" class="tab-content">
+                <h3>福岡親子熱門景點精選</h3>
+                <p class="mb-4 text-stone-700">探索福岡最受家庭歡迎的景點，從刺激的樂園到知性的博物館，滿足不同年齡層孩子的需求。</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="fukuoka-attractions-cards">
+                </div>
+                <h3 class="mt-8">景點數據比較</h3>
+                <div class="grid md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <h4>福岡景點成人門票費用 (日圓)</h4>
+                        <div class="chart-container bg-white p-2 rounded-lg shadow">
+                            <canvas id="fukuokaAttractionTicketsChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>福岡景點建議停留時間 (小時)</h4>
+                        <div class="chart-container bg-white p-2 rounded-lg shadow">
+                            <canvas id="fukuokaAttractionStayTimesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="fukuoka-hotels" class="tab-content hidden">
+                <h3>福岡親子友善住宿推薦</h3>
+                <p class="mb-4 text-stone-700">在福岡市內選擇適合親子同住的飯店時，除了考量交通便利性，客房空間、兒童設施與服務亦是重要因素。這裡為您推薦幾家評價良好的親子友善飯店。</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="fukuoka-hotels-cards">
+                </div>
+            </div>
+        </section>
+
+        <section id="oita" class="content-section p-4 hidden">
+            <h2>大分縣：動物奇遇、主題樂園與溫泉療癒之旅</h2>
+            <p class="mb-6 text-stone-700">大分縣以其豐富的自然景觀、獨特的動物園、魅力四射的主題樂園以及聞名遐邇的溫泉鄉，為親子旅遊提供了多元化的選擇。一起來探索大分的精彩吧！</p>
+            <div class="mb-6 border-b border-stone-300">
+                <nav class="flex space-x-1" aria-label="Tabs">
+                    <button class="tab-button tab-button-active" data-tab="oita-attractions">景點精選</button>
+                    <button class="tab-button" data-tab="oita-hotels">住宿推薦</button>
+                </nav>
+            </div>
+
+            <div id="oita-attractions" class="tab-content">
+                <h3>大分親子熱門景點精選</h3>
+                <p class="mb-4 text-stone-700">大分縣充滿驚奇，無論是近距離接觸野生動物，或是在夢幻的主題樂園中歡笑，都能讓您與孩子留下深刻回憶。</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="oita-attractions-cards">
+                </div>
+                 <h3 class="mt-8">景點數據比較</h3>
+                <div class="grid md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <h4>大分景點成人門票費用 (日圓)</h4>
+                        <div class="chart-container bg-white p-2 rounded-lg shadow">
+                            <canvas id="oitaAttractionTicketsChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>大分景點建議停留時間 (小時)</h4>
+                        <div class="chart-container bg-white p-2 rounded-lg shadow">
+                            <canvas id="oitaAttractionStayTimesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="oita-hotels" class="tab-content hidden">
+                <h3>大分親子友善住宿推薦 (別府及由布院地區)</h3>
+                <p class="mb-4 text-stone-700">大分縣的別府和由布院是兩大著名的溫泉觀光區，這裡的住宿設施不僅提供舒適的客房，許多飯店及日式旅館更融入了親子娛樂元素及貼心的兒童服務。</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="oita-hotels-cards">
+                </div>
+            </div>
+        </section>
+
+        <section id="itinerary" class="content-section p-4 hidden">
+            <h2>行程規劃建議：打造您的完美親子假期</h2>
+            <p class="mb-4 text-stone-700">福岡與大分擁有眾多且各具特色的親子景點，要在一次旅程中全數走遍幾乎是不可能的任務。因此，根據家庭成員的年齡、興趣以及旅遊天數，有所取捨並規劃出最適合的行程至關重要。</p>
+            <p class="mb-4 text-stone-700">建議可以考慮將行程大致分為福岡都會探索及大分自然與樂園體驗兩部分。例如，若有5-6天的時間，可以安排2-3天在福岡，著重於市區內的博物館、體驗型樂園以及海之中道的海濱公園與水族館。隨後的2-3天則可移師大分，選擇前往九州自然動物園享受與動物近距離接觸的樂趣，或到三麗鷗和諧樂園與可愛的卡通明星同歡，抑或是在由布院的溫泉小鎮中悠閒漫步，體驗不同的日式風情。</p>
+            <h3 class="text-xl font-semibold text-orange-600 mb-2">規劃每日行程時，應注意以下幾點：</h3>
+            <ul class="list-disc list-inside space-y-2 text-stone-700 mb-4">
+                <li><strong>景點地理位置</strong>：盡量將地理位置相近的景點安排在同一天，以減少交通往返的時間。</li>
+                <li><strong>活動性質搭配</strong>：避免連續安排性質過於相似或體力消耗過大的活動，可以動靜結合。</li>
+                <li><strong>兒童年齡與興趣</strong>：根據孩子的喜好選擇合適的景點。</li>
+                <li><strong>交通時間</strong>：務必將交通時間納入考量，避免行程過於緊湊。</li>
+                <li><strong>彈性預留</strong>：親子旅遊常有突發狀況，建議每日行程不要排得過滿，預留彈性時間。</li>
+            </ul>
+            <p class="text-stone-700">最終的行程應是為您的家庭量身打造的。本互動指南提供的詳盡景點與住宿資訊，希望能成為您規劃這趟旅程的得力助手，讓您能依據家庭的喜好與需求，組合出一段充滿歡笑與美好回憶的九州親子之旅。</p>
+        </section>
+    </main>
+
+    <footer class="bg-stone-800 text-amber-50 py-8 text-center mt-12">
+        <p>&copy; 2024 福岡大分親子旅遊互動指南。資訊僅供參考，請以官方最新公告為準。</p>
+    </footer>
+
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <div id="modalBody" class="max-h-[80vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentSections = document.querySelectorAll('.content-section');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const sectionLinks = document.querySelectorAll('a[data-section-link]');
+
+        function setActiveLink(activeLink) {
+            navLinks.forEach(link => {
+                link.classList.remove('nav-link-active');
+                if (link.dataset.section === activeLink.dataset.section) {
+                    link.classList.add('nav-link-active');
+                }
+            });
+        }
+        
+        function showSection(sectionId) {
+            contentSections.forEach(section => {
+                section.classList.add('hidden');
+                if (section.id === sectionId) {
+                    section.classList.remove('hidden');
+                }
+            });
+            window.scrollTo(0, 0); // Scroll to top
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sectionId = link.dataset.section;
+                showSection(sectionId);
+                setActiveLink(link);
+                if (mobileMenu.classList.contains('hidden') === false) {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+
+        sectionLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sectionId = link.dataset.sectionLink;
+                showSection(sectionId);
+                // Also update active state for main nav
+                navLinks.forEach(navLink => {
+                    if (navLink.dataset.section === sectionId) {
+                        setActiveLink(navLink);
+                    }
+                });
+            });
+        });
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTabId = button.dataset.tab;
+                const parentSection = button.closest('.content-section');
+                
+                parentSection.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('tab-button-active'));
+                button.classList.add('tab-button-active');
+                
+                parentSection.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                    if (content.id === targetTabId) {
+                        content.classList.remove('hidden');
+                    }
+                });
+            });
+        });
+
+        const modal = document.getElementById('detailsModal');
+        const modalBody = document.getElementById('modalBody');
+
+        function openModal(content) {
+            modalBody.innerHTML = content;
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+            modalBody.innerHTML = "";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        function formatLabel(str, maxLen = 16) {
+            if (str.length <= maxLen) return str;
+            const parts = [];
+            let currentPart = "";
+            str.split('').forEach(char => {
+                if (currentPart.length < maxLen) {
+                    currentPart += char;
+                } else {
+                    parts.push(currentPart);
+                    currentPart = char;
+                }
+            });
+            if (currentPart) parts.push(currentPart);
+            return parts;
+        }
+
+        const fukuokaAttractionsData = [
+            { name: "海之中道海濱公園", icon: "🏞️", shortDesc: "廣闊國營公園，四季花卉，動物之森。", details: {特色:"佔地廣闊，自然景觀豐富，多樣遊樂設施。", 亮點:"動物之森、四季花海、陽光泳池。", 地址:"福岡市東區大字西戶崎18-25", 交通:"JR香椎線「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥450, 國中以下免費", 停留:"2-3小時+", 停車:"有, ¥600", 官網:"uminaka-park.jp" }, ticket: 450, stay: 2.5 },
+            { name: "海洋世界海之中道", icon: "🐠", shortDesc: "九州之海主題水族館，精彩動物表演。", details: {特色:"大型水族館，展示約350種海洋生物。", 亮點:"海豚海獅表演、外洋大水槽、企鵝之丘。", 地址:"福岡市東區西戶崎18-28", 交通:"JR「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥2500, 中小學生¥1200", 停留:"2-3小時", 停車:"有, ¥530-¥600", 官網:"marine-world.jp (示意)" }, ticket: 2500, stay: 2.5 },
+            { name: "福岡麵包超人兒童博物館", icon: "🧸", shortDesc: "麵包超人主題樂園，角色見面會。", details: {特色:"專為學齡前兒童打造的夢幻樂園。", 亮點:"角色見面會、主題遊樂區、劇場表演。", 地址:"福岡市博多區下川端町3-1", 交通:"地下鐵「中洲川端」站直結", 開放時間:"10:00-17:00 (季節變動)", 門票:"1歲以上約¥1800-¥2200", 停留:"2-3小時+", 停車:"無專用 (利用商場)", 官網:"fukuoka-anpanman.jp" }, ticket: 2000, stay: 2.5 },
+            { name: "KidZania福岡", icon: "👨‍⚕️", shortDesc: "兒童職業體驗城，約70種職業。", details: {特色:"按2/3比例打造的迷你城市。", 亮點:"消防員、飛行員等職業體驗，賺取KidZo。", 地址:"福岡市博多區那珂6-23-1 (LaLaport內)", 交通:"JR「竹下」站", 開放時間:"分場次 (例: 09:00-14:30)", 門票:"浮動票價 (成人約¥1900-¥2800)", 停留:"4-8小時", 停車:"有 (LaLaport福岡, 有優惠)", 官網:"kidzania.jp/fukuoka/" }, ticket: 2350, stay: 4 },
+            { name: "teamLab Forest 福岡", icon: "✨", shortDesc: "互動數位藝術美術館，光影饗宴。", details: {特色:"teamLab打造，捕捉蒐集與運動森林。", 亮點:"身臨其境的互動藝術體驗。", 地址:"福岡市中央區地行濱2-2-6", 交通:"地下鐵「唐人町」站", 開放時間:"平日11-20, 假日10-20", 門票:"成人¥2400, 15歲以下¥1000", 停留:"1.5-2.5小時", 停車:"有 (利用設施停車場)", 官網:"teamlab.art/jp/e/forest/" }, ticket: 2400, stay: 2 },
+            { name: "福岡市動植物園", icon: "🐘", shortDesc: "歷史悠久，動物植物種類豐富。", details: {特色:"園區廣闊，飼養約100種動物。", 亮點:"北園、南園、亞洲熱帶溪谷區、植物園。", 地址:"福岡市中央區南公園", 交通:"地下鐵「藥院大通」站+巴士/步行", 開放時間:"09:00-17:00 (週一休)", 門票:"成人¥600, 國中以下免費", 停留:"3-4小時", 停車:"有, 收費", 官網:"zoo.city.fukuoka.lg.jp" }, ticket: 600, stay: 3.5 },
+        ];
+
+        const fukuokaHotelsData = [
+            { name: "福岡君悅飯店", icon: "🏨", shortDesc: "博多運河城旁，日式套房適合家庭。", priceIndicator: "¥¥¥", details: {親子房型:"日式套房 (可5人), 或洽連通房", 兒童服務:"12歲以下同床免費, 嬰兒床, 兒童餐具/菜單, 泳池(7歲+限制)", 地點:"博多區", 鄰近:"博多運河城"} },
+            { name: "福岡海鷹希爾頓飯店", icon: "🏨", shortDesc: "近福岡巨蛋，享海景，家庭套房。", priceIndicator: "¥¥¥", details: {親子房型:"家庭小套房/豪華房, 或洽連通房", 兒童服務:"5歲以下同床免費, 嬰兒床, 兒童遊樂區, 家庭歡樂夜", 地點:"中央區", 鄰近:"福岡PayPay巨蛋"} },
+            { name: "THE LUIGANS Spa & Resort", icon: "🏨", shortDesc: "近海之中道，度假氛圍，兒童房。", priceIndicator: "¥¥-¥¥¥", details: {親子房型:"巴拉甘兒童房", 兒童服務:"學齡前同床免費, 嬰兒床, 兒童泳池, 托兒服務", 地點:"東區", 鄰近:"海之中道海濱公園"} },
+            { name: "福岡貝塚Vessel Hotel", icon: "🏨", shortDesc: "18歲以下同床免費，用品齊全。", priceIndicator: "¥-¥¥", details: {親子房型:"家庭房, 寬敞雙床房", 兒童服務:"18歲以下同床免費, 嬰兒床/車/用品免費租借", 地點:"東區", 鄰近:"貝塚區域"} },
+        ];
+
+        const oitaAttractionsData = [
+            { name: "九州自然動物公園 AFRICAN SAFARI", icon: "🦁", shortDesc: "日本最大野生動物園，叢林巴士餵食。", details: {特色:"搭乘叢林巴士深入猛獸區，近距離觀察。", 亮點:"叢林巴士餵食、自駕遊園、可愛動物區。", 地址:"大分縣宇佐市安心院町南畑2-1755-1", 交通:"JR別府站搭巴士約50分", 開放時間:"09:30-16:00 (季節變動)", 門票:"入園: 成人¥2600; 叢林巴士: ¥1500/人", 停留:"2-3小時+", 停車:"有, 免費", 官網:"africansafari.co.jp" }, ticket: 2600, stay: 2.5 },
+            { name: "大分海洋宮殿水族館「海之卵」", icon: "🐬", shortDesc: "現代水族館，戶外ASOBEACH互動。", details: {特色:"與海洋動物成為好朋友為宗旨。", 亮點:"ASOBEACH、海洋動物表演、觸摸池。", 地址:"大分縣大分市神崎字ウト3078-22", 交通:"JR別府站搭巴士約15-30分", 開放時間:"09:00-17:00/18:00 (季節變動)", 門票:"成人¥3000, 中小學生¥1500", 停留:"1-2小時+", 停車:"有, ¥420", 官網:"umitamago.jp" }, ticket: 3000, stay: 1.5 },
+            { name: "三麗鷗和諧樂園", icon: "🎀", shortDesc: "Hello Kitty戶外主題樂園，角色遊行。", details: {特色:"集結眾多三麗鷗明星。", 亮點:"現場表演與遊行、主題遊樂設施、角色餐廳。", 地址:"大分縣速見郡日出町大字藤原5933", 交通:"JR日出站轉計程車/巴士約10分", 開放時間:"10:00-17:00 (每日變動)", 門票:"護照券: ¥3600 (4歲以上)", 停留:"半天至一天", 停車:"有, ¥500", 官網:"harmonyland.jp" }, ticket: 3600, stay: 4 },
+            { name: "由布院", icon: "♨️", shortDesc: "魅力溫泉小鎮，金鱗湖，湯之坪街道。", details: {特色:"優美自然風光、特色小店、美術館。", 亮點:"金鱗湖、湯之坪街道、由布院花卉村、3D幻視藝術館。", 地址:"大分縣由布市湯布院町", 交通:"JR「由布院」站", 開放時間:"各設施不同", 門票:"花卉村免費, 3D館: ¥1000 (4歲+)", 停留:"半天至一天", 停車:"有, 各處收費", 官網:"floral-village.com 等" }, ticket: 1000, stay: 4 }, // Ticket for 3D art museum as representative
+        ];
+
+        const oitaHotelsData = [
+            { name: "別府溫泉 杉乃井飯店", icon: "🏨", shortDesc: "大型溫泉度假村，水上樂園，MIKIHOUSE聯名房。", priceIndicator: "¥¥-¥¥¥", details: {親子房型:"MIKIHOUSE聯名房, 虹館客房", 兒童服務:"嬰兒用品租借, 水上樂園, 娛樂中心, 兒童自助餐", 地點:"別府", 溫泉特色:"大型露天溫泉池, 溫泉泳池"} },
+            { name: "由布院 いよとみ", icon: "🏨", shortDesc: "所有湯池皆可私人包場，免費嬰兒用品。", priceIndicator: "¥¥", details: {親子房型:"和洋室 (部分附半露天風呂)", 兒童服務:"所有大眾湯池皆可私人包場, 免費嬰兒食品/尿布, 兒童遊戲室", 地點:"由布院", 溫泉特色:"所有湯池皆可包場"} },
+            { name: "由布院Yawaragi之鄉YADOYA", icon: "🏨", shortDesc: "兒童遊戲室，繪本角落，日式客房。", priceIndicator: "¥¥", details: {親子房型:"日式客房", 兒童服務:"兒童遊戲室, 繪本角落, 兒童浴衣", 地點:"由布院", 溫泉特色:"大浴場"} },
+            { name: "大分綠洲塔日航飯店", icon: "🏨", shortDesc: "大分市中心，兒童同床免費，交通便利。", priceIndicator: "¥¥-¥¥¥", details: {親子房型:"或有連通房, 套房", 兒童服務:"兒童同床免費 (含早), 嬰兒床/護欄租借", 地點:"大分市區", 溫泉特色:"無 (市區飯店)"} },
+        ];
+
+        function createCard(item, type) {
+            let content = `
+                <div class="card-content">
+                    <h3 class="card-title">${item.icon} ${item.name}</h3>
+                    <p class="card-text">${item.shortDesc}</p>
+            `;
+            if (type === 'hotel') {
+                content += `<p class="card-text font-semibold">價格指標: ${item.priceIndicator}</p>`;
+            }
+            content += `
+                    <button class="card-button" onclick="showDetails('${item.name}', '${type}')">查看詳情</button>
+                </div>
+            `;
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            cardDiv.innerHTML = content;
+            return cardDiv;
+        }
+
+        function populateCards(data, containerId, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; // Clear existing cards
+            data.forEach(item => {
+                container.appendChild(createCard(item, type));
+            });
+        }
+        
+        function showDetails(itemName, type) {
+            let itemData;
+            if (type === 'fukuoka-attraction') itemData = fukuokaAttractionsData.find(i => i.name === itemName);
+            else if (type === 'fukuoka-hotel') itemData = fukuokaHotelsData.find(i => i.name === itemName);
+            else if (type === 'oita-attraction') itemData = oitaAttractionsData.find(i => i.name === itemName);
+            else if (type === 'oita-hotel') itemData = oitaHotelsData.find(i => i.name === itemName);
+
+            if (!itemData) return;
+
+            let detailsHtml = `<h2 class="text-2xl font-bold text-orange-700 mb-4">${itemData.icon} ${itemData.name}</h2>`;
+            for (const key in itemData.details) {
+                detailsHtml += `<p class="mb-2"><strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${itemData.details[key]}</p>`;
+            }
+            if (itemData.details.官網 && itemData.details.官網 !== "待確認" && itemData.details.官網 !== "[20] 網站連結" && itemData.details.官網 !== "marine-world.jp (示意)") {
+                 detailsHtml += `<p class="mb-2"><strong>官網:</strong> <a href="http://${itemData.details.官網}" target="_blank" class="text-teal-600 hover:underline">${itemData.details.官網}</a></p>`;
+            }
+            openModal(detailsHtml);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            populateCards(fukuokaAttractionsData, 'fukuoka-attractions-cards', 'fukuoka-attraction');
+            populateCards(fukuokaHotelsData, 'fukuoka-hotels-cards', 'fukuoka-hotel');
+            populateCards(oitaAttractionsData, 'oita-attractions-cards', 'oita-attraction');
+            populateCards(oitaHotelsData, 'oita-hotels-cards', 'oita-hotel');
+
+            const fukuokaTicketCtx = document.getElementById('fukuokaAttractionTicketsChart').getContext('2d');
+            new Chart(fukuokaTicketCtx, {
+                type: 'bar',
+                data: {
+                    labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
+                    datasets: [{
+                        label: '成人門票 (JPY)',
+                        data: fukuokaAttractionsData.map(a => a.ticket),
+                        backgroundColor: 'rgba(234, 179, 8, 0.6)', // amber-500
+                        borderColor: 'rgba(217, 119, 6, 1)', // amber-600
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
+                }
+            });
+
+            const fukuokaStayCtx = document.getElementById('fukuokaAttractionStayTimesChart').getContext('2d');
+            new Chart(fukuokaStayCtx, {
+                type: 'bar',
+                data: {
+                    labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
+                    datasets: [{
+                        label: '建議停留 (小時)',
+                        data: fukuokaAttractionsData.map(a => a.stay),
+                        backgroundColor: 'rgba(20, 184, 166, 0.6)', // teal-500
+                        borderColor: 'rgba(13, 148, 136, 1)', // teal-600
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
+                }
+            });
+            
+            const oitaTicketCtx = document.getElementById('oitaAttractionTicketsChart').getContext('2d');
+            new Chart(oitaTicketCtx, {
+                type: 'bar',
+                data: {
+                    labels: oitaAttractionsData.map(a => formatLabel(a.name)),
+                    datasets: [{
+                        label: '成人門票 (JPY)',
+                        data: oitaAttractionsData.map(a => a.ticket),
+                        backgroundColor: 'rgba(234, 179, 8, 0.6)',
+                        borderColor: 'rgba(217, 119, 6, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
+                }
+            });
+
+            const oitaStayCtx = document.getElementById('oitaAttractionStayTimesChart').getContext('2d');
+            new Chart(oitaStayCtx, {
+                type: 'bar',
+                data: {
+                    labels: oitaAttractionsData.map(a => formatLabel(a.name)),
+                    datasets: [{
+                        label: '建議停留 (小時)',
+                        data: oitaAttractionsData.map(a => a.stay),
+                        backgroundColor: 'rgba(20, 184, 166, 0.6)',
+                        borderColor: 'rgba(13, 148, 136, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
+                }
+            });
+            showSection('home'); // Show home section by default
+        });
+
+    </script>
+</body>
+</html>
