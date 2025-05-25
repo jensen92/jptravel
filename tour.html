@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>福岡大分親子旅遊互動指南</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Visualization & Content Choices:
         - Transportation Comparison: HTML table (Goal: Compare, Method: Table, Interaction: Read).
         - Attraction/Hotel Lists: Interactive cards (Goal: Inform/Choose, Method: HTML cards + JS for modals, Interaction: Click to open modal).
@@ -15,6 +17,7 @@
         - Oita Attraction Stay Times: Chart.js Bar Chart (Goal: Compare, Method: Bar Chart, Interaction: Hover for tooltip, Justification: Visual comparison of time commitment).
         - Hotel Price Indicators: Visual representation within hotel cards (e.g., using text/icons like ¥, ¥¥, ¥¥¥) (Goal: Inform, Method: HTML/CSS, Interaction: Read).
         - All textual content from the report will be placed in relevant sections with introductory paragraphs for context.
+        - Itinerary Map: Leaflet.js map to show attraction locations.
         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -104,6 +107,20 @@
         th { @apply px-4 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider; }
         tbody { @apply bg-white divide-y divide-stone-200; }
         td { @apply px-4 py-3 text-sm text-stone-700; }
+
+        /* Leaflet emoji marker style */
+        .emoji-marker {
+            background: transparent;
+            border: none;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        .leaflet-popup-content {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body class="bg-amber-50 text-stone-800">
@@ -116,7 +133,6 @@
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="index.html" class="nav-link">主行程</a>
                         <a href="#" class="nav-link nav-link-active" data-section="home">首頁</a>
                         <a href="#" class="nav-link" data-section="transport">交通指南</a>
                         <a href="#" class="nav-link" data-section="fukuoka">福岡親子遊</a>
@@ -134,7 +150,6 @@
             </div>
         </nav>
         <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
-            <a href="index.html" class="block nav-link">主行程</a>
             <a href="#" class="block nav-link" data-section="home">首頁</a>
             <a href="#" class="block nav-link" data-section="transport">交通指南</a>
             <a href="#" class="block nav-link" data-section="fukuoka">福岡親子遊</a>
@@ -291,10 +306,15 @@
         <section id="itinerary" class="content-section p-4 hidden">
             <h2>行程規劃建議：打造您的完美親子假期</h2>
             <p class="mb-4 text-stone-700">福岡與大分擁有眾多且各具特色的親子景點，要在一次旅程中全數走遍幾乎是不可能的任務。因此，根據家庭成員的年齡、興趣以及旅遊天數，有所取捨並規劃出最適合的行程至關重要。</p>
+            
+            <h3 class="text-xl font-semibold text-orange-600 mb-2 mt-5">景點地理位置概覽</h3>
+            <p class="mb-4 text-stone-700">下方的互動地圖標示了福岡及大分地區主要親子景點的地理位置。您可以透過地圖了解各景點的相對位置，以便更順暢地規劃您的旅遊路線，減少交通往返時間。點擊地圖上的圖示可以查看景點名稱。</p>
+            <div id="itineraryMap" class="rounded-lg shadow-lg mb-6" style="height: 450px; width: 100%;"></div>
+            
             <p class="mb-4 text-stone-700">建議可以考慮將行程大致分為福岡都會探索及大分自然與樂園體驗兩部分。例如，若有5-6天的時間，可以安排2-3天在福岡，著重於市區內的博物館、體驗型樂園以及海之中道的海濱公園與水族館。隨後的2-3天則可移師大分，選擇前往九州自然動物園享受與動物近距離接觸的樂趣，或到三麗鷗和諧樂園與可愛的卡通明星同歡，抑或是在由布院的溫泉小鎮中悠閒漫步，體驗不同的日式風情。</p>
             <h3 class="text-xl font-semibold text-orange-600 mb-2">規劃每日行程時，應注意以下幾點：</h3>
             <ul class="list-disc list-inside space-y-2 text-stone-700 mb-4">
-                <li><strong>景點地理位置</strong>：盡量將地理位置相近的景點安排在同一天，以減少交通往返的時間。</li>
+                <li><strong>景點地理位置</strong>：盡量將地理位置相近的景點安排在同一天，以減少交通往返的時間。(可參考上方地圖)</li>
                 <li><strong>活動性質搭配</strong>：避免連續安排性質過於相似或體力消耗過大的活動，可以動靜結合。</li>
                 <li><strong>兒童年齡與興趣</strong>：根據孩子的喜好選擇合適的景點。</li>
                 <li><strong>交通時間</strong>：務必將交通時間納入考量，避免行程過於緊湊。</li>
@@ -321,6 +341,7 @@
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');
         const sectionLinks = document.querySelectorAll('a[data-section-link]');
+        let itineraryMapInstance = null; // To store the map instance
 
         function setActiveLink(activeLink) {
             navLinks.forEach(link => {
@@ -338,6 +359,9 @@
                     section.classList.remove('hidden');
                 }
             });
+            if (sectionId === 'itinerary') {
+                initItineraryMap(); // Initialize map when itinerary section is shown
+            }
             window.scrollTo(0, 0); // Scroll to top
         }
 
@@ -358,7 +382,6 @@
                 e.preventDefault();
                 const sectionId = link.dataset.sectionLink;
                 showSection(sectionId);
-                // Also update active state for main nav
                 navLinks.forEach(navLink => {
                     if (navLink.dataset.section === sectionId) {
                         setActiveLink(navLink);
@@ -424,13 +447,15 @@
             return parts;
         }
 
+        // --- Attraction and Hotel Data with Added Coordinates ---
+        // Note: Coordinates are approximate for demonstration purposes.
         const fukuokaAttractionsData = [
-            { name: "海之中道海濱公園", icon: "🏞️", shortDesc: "廣闊國營公園，四季花卉，動物之森。", details: {特色:"佔地廣闊，自然景觀豐富，多樣遊樂設施。", 亮點:"動物之森、四季花海、陽光泳池。", 地址:"福岡市東區大字西戶崎18-25", 交通:"JR香椎線「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥450, 國中以下免費", 停留:"2-3小時+", 停車:"有, ¥600", 官網:"uminaka-park.jp" }, ticket: 450, stay: 2.5 },
-            { name: "海洋世界海之中道", icon: "🐠", shortDesc: "九州之海主題水族館，精彩動物表演。", details: {特色:"大型水族館，展示約350種海洋生物。", 亮點:"海豚海獅表演、外洋大水槽、企鵝之丘。", 地址:"福岡市東區西戶崎18-28", 交通:"JR「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥2500, 中小學生¥1200", 停留:"2-3小時", 停車:"有, ¥530-¥600", 官網:"marine-world.jp (示意)" }, ticket: 2500, stay: 2.5 },
-            { name: "福岡麵包超人兒童博物館", icon: "🧸", shortDesc: "麵包超人主題樂園，角色見面會。", details: {特色:"專為學齡前兒童打造的夢幻樂園。", 亮點:"角色見面會、主題遊樂區、劇場表演。", 地址:"福岡市博多區下川端町3-1", 交通:"地下鐵「中洲川端」站直結", 開放時間:"10:00-17:00 (季節變動)", 門票:"1歲以上約¥1800-¥2200", 停留:"2-3小時+", 停車:"無專用 (利用商場)", 官網:"fukuoka-anpanman.jp" }, ticket: 2000, stay: 2.5 },
-            { name: "KidZania福岡", icon: "👨‍⚕️", shortDesc: "兒童職業體驗城，約70種職業。", details: {特色:"按2/3比例打造的迷你城市。", 亮點:"消防員、飛行員等職業體驗，賺取KidZo。", 地址:"福岡市博多區那珂6-23-1 (LaLaport內)", 交通:"JR「竹下」站", 開放時間:"分場次 (例: 09:00-14:30)", 門票:"浮動票價 (成人約¥1900-¥2800)", 停留:"4-8小時", 停車:"有 (LaLaport福岡, 有優惠)", 官網:"kidzania.jp/fukuoka/" }, ticket: 2350, stay: 4 },
-            { name: "teamLab Forest 福岡", icon: "✨", shortDesc: "互動數位藝術美術館，光影饗宴。", details: {特色:"teamLab打造，捕捉蒐集與運動森林。", 亮點:"身臨其境的互動藝術體驗。", 地址:"福岡市中央區地行濱2-2-6", 交通:"地下鐵「唐人町」站", 開放時間:"平日11-20, 假日10-20", 門票:"成人¥2400, 15歲以下¥1000", 停留:"1.5-2.5小時", 停車:"有 (利用設施停車場)", 官網:"teamlab.art/jp/e/forest/" }, ticket: 2400, stay: 2 },
-            { name: "福岡市動植物園", icon: "🐘", shortDesc: "歷史悠久，動物植物種類豐富。", details: {特色:"園區廣闊，飼養約100種動物。", 亮點:"北園、南園、亞洲熱帶溪谷區、植物園。", 地址:"福岡市中央區南公園", 交通:"地下鐵「藥院大通」站+巴士/步行", 開放時間:"09:00-17:00 (週一休)", 門票:"成人¥600, 國中以下免費", 停留:"3-4小時", 停車:"有, 收費", 官網:"zoo.city.fukuoka.lg.jp" }, ticket: 600, stay: 3.5 },
+            { name: "海之中道海濱公園", icon: "🏞️", shortDesc: "廣闊國營公園，四季花卉，動物之森。", details: {特色:"佔地廣闊，自然景觀豐富，多樣遊樂設施。", 亮點:"動物之森、四季花海、陽光泳池。", 地址:"福岡市東區大字西戶崎18-25", 交通:"JR香椎線「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥450, 國中以下免費", 停留:"2-3小時+", 停車:"有, ¥600", 官網:"uminaka-park.jp" }, ticket: 450, stay: 2.5, lat: 33.660, lng: 130.310 },
+            { name: "海洋世界海之中道", icon: "🐠", shortDesc: "九州之海主題水族館，精彩動物表演。", details: {特色:"大型水族館，展示約350種海洋生物。", 亮點:"海豚海獅表演、外洋大水槽、企鵝之丘。", 地址:"福岡市東區西戶崎18-28", 交通:"JR「海之中道」站", 開放時間:"09:30-17:30 (季節變動)", 門票:"成人¥2500, 中小學生¥1200", 停留:"2-3小時", 停車:"有, ¥530-¥600", 官網:"marine-world.jp (示意)" }, ticket: 2500, stay: 2.5, lat: 33.658, lng: 130.312 },
+            { name: "福岡麵包超人兒童博物館", icon: "🧸", shortDesc: "麵包超人主題樂園，角色見面會。", details: {特色:"專為學齡前兒童打造的夢幻樂園。", 亮點:"角色見面會、主題遊樂區、劇場表演。", 地址:"福岡市博多區下川端町3-1", 交通:"地下鐵「中洲川端」站直結", 開放時間:"10:00-17:00 (季節變動)", 門票:"1歲以上約¥1800-¥2200", 停留:"2-3小時+", 停車:"無專用 (利用商場)", 官網:"fukuoka-anpanman.jp" }, ticket: 2000, stay: 2.5, lat: 33.593, lng: 130.407 },
+            { name: "KidZania福岡", icon: "👨‍⚕️", shortDesc: "兒童職業體驗城，約70種職業。", details: {特色:"按2/3比例打造的迷你城市。", 亮點:"消防員、飛行員等職業體驗，賺取KidZo。", 地址:"福岡市博多區那珂6-23-1 (LaLaport內)", 交通:"JR「竹下」站", 開放時間:"分場次 (例: 09:00-14:30)", 門票:"浮動票價 (成人約¥1900-¥2800)", 停留:"4-8小時", 停車:"有 (LaLaport福岡, 有優惠)", 官網:"kidzania.jp/fukuoka/" }, ticket: 2350, stay: 4, lat: 33.573, lng: 130.426 },
+            { name: "teamLab Forest 福岡", icon: "✨", shortDesc: "互動數位藝術美術館，光影饗宴。", details: {特色:"teamLab打造，捕捉蒐集與運動森林。", 亮點:"身臨其境的互動藝術體驗。", 地址:"福岡市中央區地行濱2-2-6", 交通:"地下鐵「唐人町」站", 開放時間:"平日11-20, 假日10-20", 門票:"成人¥2400, 15歲以下¥1000", 停留:"1.5-2.5小時", 停車:"有 (利用設施停車場)", 官網:"teamlab.art/jp/e/forest/" }, ticket: 2400, stay: 2, lat: 33.595, lng: 130.364 },
+            { name: "福岡市動植物園", icon: "🐘", shortDesc: "歷史悠久，動物植物種類豐富。", details: {特色:"園區廣闊，飼養約100種動物。", 亮點:"北園、南園、亞洲熱帶溪谷區、植物園。", 地址:"福岡市中央區南公園", 交通:"地下鐵「藥院大通」站+巴士/步行", 開放時間:"09:00-17:00 (週一休)", 門票:"成人¥600, 國中以下免費", 停留:"3-4小時", 停車:"有, 收費", 官網:"zoo.city.fukuoka.lg.jp" }, ticket: 600, stay: 3.5, lat: 33.578, lng: 130.400 },
         ];
 
         const fukuokaHotelsData = [
@@ -441,10 +466,10 @@
         ];
 
         const oitaAttractionsData = [
-            { name: "九州自然動物公園 AFRICAN SAFARI", icon: "🦁", shortDesc: "日本最大野生動物園，叢林巴士餵食。", details: {特色:"搭乘叢林巴士深入猛獸區，近距離觀察。", 亮點:"叢林巴士餵食、自駕遊園、可愛動物區。", 地址:"大分縣宇佐市安心院町南畑2-1755-1", 交通:"JR別府站搭巴士約50分", 開放時間:"09:30-16:00 (季節變動)", 門票:"入園: 成人¥2600; 叢林巴士: ¥1500/人", 停留:"2-3小時+", 停車:"有, 免費", 官網:"africansafari.co.jp" }, ticket: 2600, stay: 2.5 },
-            { name: "大分海洋宮殿水族館「海之卵」", icon: "🐬", shortDesc: "現代水族館，戶外ASOBEACH互動。", details: {特色:"與海洋動物成為好朋友為宗旨。", 亮點:"ASOBEACH、海洋動物表演、觸摸池。", 地址:"大分縣大分市神崎字ウト3078-22", 交通:"JR別府站搭巴士約15-30分", 開放時間:"09:00-17:00/18:00 (季節變動)", 門票:"成人¥3000, 中小學生¥1500", 停留:"1-2小時+", 停車:"有, ¥420", 官網:"umitamago.jp" }, ticket: 3000, stay: 1.5 },
-            { name: "三麗鷗和諧樂園", icon: "🎀", shortDesc: "Hello Kitty戶外主題樂園，角色遊行。", details: {特色:"集結眾多三麗鷗明星。", 亮點:"現場表演與遊行、主題遊樂設施、角色餐廳。", 地址:"大分縣速見郡日出町大字藤原5933", 交通:"JR日出站轉計程車/巴士約10分", 開放時間:"10:00-17:00 (每日變動)", 門票:"護照券: ¥3600 (4歲以上)", 停留:"半天至一天", 停車:"有, ¥500", 官網:"harmonyland.jp" }, ticket: 3600, stay: 4 },
-            { name: "由布院", icon: "♨️", shortDesc: "魅力溫泉小鎮，金鱗湖，湯之坪街道。", details: {特色:"優美自然風光、特色小店、美術館。", 亮點:"金鱗湖、湯之坪街道、由布院花卉村、3D幻視藝術館。", 地址:"大分縣由布市湯布院町", 交通:"JR「由布院」站", 開放時間:"各設施不同", 門票:"花卉村免費, 3D館: ¥1000 (4歲+)", 停留:"半天至一天", 停車:"有, 各處收費", 官網:"floral-village.com 等" }, ticket: 1000, stay: 4 }, // Ticket for 3D art museum as representative
+            { name: "九州自然動物公園 AFRICAN SAFARI", icon: "🦁", shortDesc: "日本最大野生動物園，叢林巴士餵食。", details: {特色:"搭乘叢林巴士深入猛獸區，近距離觀察。", 亮點:"叢林巴士餵食、自駕遊園、可愛動物區。", 地址:"大分縣宇佐市安心院町南畑2-1755-1", 交通:"JR別府站搭巴士約50分", 開放時間:"09:30-16:00 (季節變動)", 門票:"入園: 成人¥2600; 叢林巴士: ¥1500/人", 停留:"2-3小時+", 停車:"有, 免費", 官網:"africansafari.co.jp" }, ticket: 2600, stay: 2.5, lat: 33.477, lng: 131.363 },
+            { name: "大分海洋宮殿水族館「海之卵」", icon: "🐬", shortDesc: "現代水族館，戶外ASOBEACH互動。", details: {特色:"與海洋動物成為好朋友為宗旨。", 亮點:"ASOBEACH、海洋動物表演、觸摸池。", 地址:"大分縣大分市神崎字ウト3078-22", 交通:"JR別府站搭巴士約15-30分", 開放時間:"09:00-17:00/18:00 (季節變動)", 門票:"成人¥3000, 中小學生¥1500", 停留:"1-2小時+", 停車:"有, ¥420", 官網:"umitamago.jp" }, ticket: 3000, stay: 1.5, lat: 33.271, lng: 131.660 },
+            { name: "三麗鷗和諧樂園", icon: "🎀", shortDesc: "Hello Kitty戶外主題樂園，角色遊行。", details: {特色:"集結眾多三麗鷗明星。", 亮點:"現場表演與遊行、主題遊樂設施、角色餐廳。", 地址:"大分縣速見郡日出町大字藤原5933", 交通:"JR日出站轉計程車/巴士約10分", 開放時間:"10:00-17:00 (每日變動)", 門票:"護照券: ¥3600 (4歲以上)", 停留:"半天至一天", 停車:"有, ¥500", 官網:"harmonyland.jp" }, ticket: 3600, stay: 4, lat: 33.374, lng: 131.540 },
+            { name: "由布院", icon: "♨️", shortDesc: "魅力溫泉小鎮，金鱗湖，湯之坪街道。", details: {特色:"優美自然風光、特色小店、美術館。", 亮點:"金鱗湖、湯之坪街道、由布院花卉村、3D幻視藝術館。", 地址:"大分縣由布市湯布院町", 交通:"JR「由布院」站", 開放時間:"各設施不同", 門票:"花卉村免費, 3D館: ¥1000 (4歲+)", 停留:"半天至一天", 停車:"有, 各處收費", 官網:"floral-village.com 等" }, ticket: 1000, stay: 4, lat: 33.263, lng: 131.350 },
         ];
 
         const oitaHotelsData = [
@@ -464,7 +489,7 @@
                 content += `<p class="card-text font-semibold">價格指標: ${item.priceIndicator}</p>`;
             }
             content += `
-                    <button class="card-button" onclick="showDetails('${item.name}', '${type}')">查看詳情</button>
+                    <button class="card-button" onclick="showDetails('${item.name}', '${type.replace('-attraction', '').replace('-hotel', '')}')">查看詳情</button>
                 </div>
             `;
             const cardDiv = document.createElement('div');
@@ -475,29 +500,95 @@
 
         function populateCards(data, containerId, type) {
             const container = document.getElementById(containerId);
+            if (!container) {
+                console.error("Container not found for cards:", containerId);
+                return;
+            }
             container.innerHTML = ''; // Clear existing cards
             data.forEach(item => {
                 container.appendChild(createCard(item, type));
             });
         }
         
-        function showDetails(itemName, type) {
+        function showDetails(itemName, itemType) { // Renamed type to itemType to avoid conflict
             let itemData;
-            if (type === 'fukuoka-attraction') itemData = fukuokaAttractionsData.find(i => i.name === itemName);
-            else if (type === 'fukuoka-hotel') itemData = fukuokaHotelsData.find(i => i.name === itemName);
-            else if (type === 'oita-attraction') itemData = oitaAttractionsData.find(i => i.name === itemName);
-            else if (type === 'oita-hotel') itemData = oitaHotelsData.find(i => i.name === itemName);
+            // Adjusted to match the type string passed from createCard more directly
+            if (itemType === 'fukuoka') { // Assuming attractions are default for 'fukuoka' type
+                 itemData = fukuokaAttractionsData.find(i => i.name === itemName) || fukuokaHotelsData.find(i => i.name === itemName);
+            } else if (itemType === 'oita') { // Assuming attractions are default for 'oita' type
+                 itemData = oitaAttractionsData.find(i => i.name === itemName) || oitaHotelsData.find(i => i.name === itemName);
+            }
+            
+            // Fallback if specific attraction/hotel type was passed
+            if (!itemData) {
+                if (itemType.includes('fukuoka-attraction')) itemData = fukuokaAttractionsData.find(i => i.name === itemName);
+                else if (itemType.includes('fukuoka-hotel')) itemData = fukuokaHotelsData.find(i => i.name === itemName);
+                else if (itemType.includes('oita-attraction')) itemData = oitaAttractionsData.find(i => i.name === itemName);
+                else if (itemType.includes('oita-hotel')) itemData = oitaHotelsData.find(i => i.name === itemName);
+            }
 
-            if (!itemData) return;
+
+            if (!itemData || !itemData.details) {
+                console.error("Item data or details not found for:", itemName, itemType);
+                modalBody.innerHTML = `<p>抱歉，找不到 ${itemName} 的詳細資訊。</p>`;
+                modal.style.display = "block";
+                return;
+            }
 
             let detailsHtml = `<h2 class="text-2xl font-bold text-orange-700 mb-4">${itemData.icon} ${itemData.name}</h2>`;
             for (const key in itemData.details) {
                 detailsHtml += `<p class="mb-2"><strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${itemData.details[key]}</p>`;
             }
             if (itemData.details.官網 && itemData.details.官網 !== "待確認" && itemData.details.官網 !== "[20] 網站連結" && itemData.details.官網 !== "marine-world.jp (示意)") {
-                 detailsHtml += `<p class="mb-2"><strong>官網:</strong> <a href="http://${itemData.details.官網}" target="_blank" class="text-teal-600 hover:underline">${itemData.details.官網}</a></p>`;
+                 detailsHtml += `<p class="mb-2"><strong>官網:</strong> <a href="https://${itemData.details.官網}" target="_blank" rel="noopener noreferrer" class="text-teal-600 hover:underline">${itemData.details.官網}</a></p>`;
             }
             openModal(detailsHtml);
+        }
+
+        function initItineraryMap() {
+            if (itineraryMapInstance) { // If map already exists, just ensure it's visible and sized correctly
+                itineraryMapInstance.invalidateSize();
+                return;
+            }
+            if (!document.getElementById('itineraryMap') || !L) return; // Ensure div and Leaflet are available
+
+            // Centering point for Northern Kyushu (approximate)
+            itineraryMapInstance = L.map('itineraryMap').setView([33.45, 130.9], 8);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(itineraryMapInstance);
+
+            const allAttractions = [...fukuokaAttractionsData, ...oitaAttractionsData];
+            const markers = [];
+
+            allAttractions.forEach(item => {
+                if (item.lat && item.lng) {
+                    const emojiIcon = L.divIcon({
+                        html: `<span style="font-size: 24px;">${item.icon}</span>`,
+                        className: 'emoji-marker', // Removes default Leaflet icon background/border
+                        iconSize: [30, 30], // Size of the icon
+                        iconAnchor: [15, 30], // Point of the icon which will correspond to marker's location
+                        popupAnchor: [0, -25] // Point from which the popup should open relative to the iconAnchor
+                    });
+
+                    const marker = L.marker([item.lat, item.lng], { icon: emojiIcon })
+                        .addTo(itineraryMapInstance)
+                        .bindPopup(item.name);
+                    markers.push(marker);
+                }
+            });
+
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                itineraryMapInstance.fitBounds(group.getBounds().pad(0.3)); // Add some padding
+            }
+             // Invalidate size after a short delay to ensure the map container is fully rendered
+            setTimeout(() => {
+                if (itineraryMapInstance) {
+                    itineraryMapInstance.invalidateSize();
+                }
+            }, 100);
         }
         
         document.addEventListener('DOMContentLoaded', () => {
@@ -506,89 +597,78 @@
             populateCards(oitaAttractionsData, 'oita-attractions-cards', 'oita-attraction');
             populateCards(oitaHotelsData, 'oita-hotels-cards', 'oita-hotel');
 
-            const fukuokaTicketCtx = document.getElementById('fukuokaAttractionTicketsChart').getContext('2d');
-            new Chart(fukuokaTicketCtx, {
-                type: 'bar',
-                data: {
-                    labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
-                    datasets: [{
-                        label: '成人門票 (JPY)',
-                        data: fukuokaAttractionsData.map(a => a.ticket),
-                        backgroundColor: 'rgba(234, 179, 8, 0.6)', // amber-500
-                        borderColor: 'rgba(217, 119, 6, 1)', // amber-600
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
-                }
-            });
+            // Chart initializations (ensure canvas elements exist)
+            const fukuokaTicketCtx = document.getElementById('fukuokaAttractionTicketsChart')?.getContext('2d');
+            if (fukuokaTicketCtx) {
+                new Chart(fukuokaTicketCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
+                        datasets: [{
+                            label: '成人門票 (JPY)',
+                            data: fukuokaAttractionsData.map(a => a.ticket),
+                            backgroundColor: 'rgba(234, 179, 8, 0.6)', 
+                            borderColor: 'rgba(217, 119, 6, 1)', 
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, tooltip: { displayColors:false } } }
+                });
+            }
 
-            const fukuokaStayCtx = document.getElementById('fukuokaAttractionStayTimesChart').getContext('2d');
-            new Chart(fukuokaStayCtx, {
-                type: 'bar',
-                data: {
-                    labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
-                    datasets: [{
-                        label: '建議停留 (小時)',
-                        data: fukuokaAttractionsData.map(a => a.stay),
-                        backgroundColor: 'rgba(20, 184, 166, 0.6)', // teal-500
-                        borderColor: 'rgba(13, 148, 136, 1)', // teal-600
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
-                }
-            });
+            const fukuokaStayCtx = document.getElementById('fukuokaAttractionStayTimesChart')?.getContext('2d');
+            if (fukuokaStayCtx) {
+                new Chart(fukuokaStayCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: fukuokaAttractionsData.map(a => formatLabel(a.name)),
+                        datasets: [{
+                            label: '建議停留 (小時)',
+                            data: fukuokaAttractionsData.map(a => a.stay),
+                            backgroundColor: 'rgba(20, 184, 166, 0.6)', 
+                            borderColor: 'rgba(13, 148, 136, 1)', 
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, tooltip: { displayColors:false } } }
+                });
+            }
             
-            const oitaTicketCtx = document.getElementById('oitaAttractionTicketsChart').getContext('2d');
-            new Chart(oitaTicketCtx, {
-                type: 'bar',
-                data: {
-                    labels: oitaAttractionsData.map(a => formatLabel(a.name)),
-                    datasets: [{
-                        label: '成人門票 (JPY)',
-                        data: oitaAttractionsData.map(a => a.ticket),
-                        backgroundColor: 'rgba(234, 179, 8, 0.6)',
-                        borderColor: 'rgba(217, 119, 6, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
-                }
-            });
+            const oitaTicketCtx = document.getElementById('oitaAttractionTicketsChart')?.getContext('2d');
+            if (oitaTicketCtx) {
+                new Chart(oitaTicketCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: oitaAttractionsData.map(a => formatLabel(a.name)),
+                        datasets: [{
+                            label: '成人門票 (JPY)',
+                            data: oitaAttractionsData.map(a => a.ticket),
+                            backgroundColor: 'rgba(234, 179, 8, 0.6)',
+                            borderColor: 'rgba(217, 119, 6, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, tooltip: { displayColors:false } } }
+                });
+            }
 
-            const oitaStayCtx = document.getElementById('oitaAttractionStayTimesChart').getContext('2d');
-            new Chart(oitaStayCtx, {
-                type: 'bar',
-                data: {
-                    labels: oitaAttractionsData.map(a => formatLabel(a.name)),
-                    datasets: [{
-                        label: '建議停留 (小時)',
-                        data: oitaAttractionsData.map(a => a.stay),
-                        backgroundColor: 'rgba(20, 184, 166, 0.6)',
-                        borderColor: 'rgba(13, 148, 136, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { display: false }, tooltip: { displayColors:false } }
-                }
-            });
+            const oitaStayCtx = document.getElementById('oitaAttractionStayTimesChart')?.getContext('2d');
+            if (oitaStayCtx) {
+                new Chart(oitaStayCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: oitaAttractionsData.map(a => formatLabel(a.name)),
+                        datasets: [{
+                            label: '建議停留 (小時)',
+                            data: oitaAttractionsData.map(a => a.stay),
+                            backgroundColor: 'rgba(20, 184, 166, 0.6)',
+                            borderColor: 'rgba(13, 148, 136, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, tooltip: { displayColors:false } } }
+                });
+            }
             showSection('home'); // Show home section by default
         });
 
